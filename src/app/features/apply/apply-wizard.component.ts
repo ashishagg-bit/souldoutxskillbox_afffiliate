@@ -65,6 +65,9 @@ export class ApplyWizardComponent {
     if (file) {
       this.uploadedFileName.set(file.name);
       this.appState.setInsights({ screenshotFileName: file.name });
+      // Once a backend exists: POST this file to /api/affiliate/parse-insights-screenshot
+      // and pre-fill followers/engagementRate/audienceIndiaPercent from the response
+      // (see docs/api-spec.md). Manual entry below stays as the fallback/correction path.
     }
   }
 

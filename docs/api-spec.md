@@ -148,6 +148,42 @@ Returns the computed score breakdown — output of
 }
 ```
 
+### `POST /api/affiliate/parse-insights-screenshot`
+
+Reads the uploaded Instagram insights screenshot with a vision-capable LLM
+and extracts the numbers the step-3 form asks for, so the user doesn't have
+to type them by hand. Called as soon as the file is selected in step 3,
+before the "Continue" button — the extracted values pre-fill the form
+fields but remain editable; nothing here is auto-submitted without the user
+seeing and being able to correct it first.
+
+```
+screenshot: file, required, image, max 8mb
+```
+
+```json
+{
+  "followers": 68000,
+  "engagement_rate": 3.2,
+  "audience_india_percent": 78,
+  "confidence": "high"
+}
+```
+
+`confidence` is `"low"` when the model isn't sure it read a field correctly
+(cropped screenshot, unusual layout, glare, etc.) — the frontend should
+visually flag any pre-filled field paired with `"low"` confidence (e.g. a
+small "double-check this" hint) rather than silently trusting it. Fields
+the model couldn't find at all should come back `null` and simply leave
+that input blank for the user to fill in themselves.
+
+This is not implemented in the current build (there's no backend yet to
+call a vision model from, and an API key can never live in this repo's
+client-side code since it deploys to public static hosting). Step 3 today
+only has manual number entry; wiring this in later is a frontend change in
+`apply-wizard.component.ts::onFileSelected()` plus this one backend
+endpoint — no other screens change.
+
 ### `GET /api/gigs?type=&min_tier=`
 Lists gigs, optionally filtered by `type`. Response includes an
 `eligible: boolean` computed against the caller's current tier so the
@@ -198,5 +234,9 @@ plus `gig_applications.status`.
   estimate before submitting).
 - Screenshot upload: the step-3 file input already collects a `File` object
   (`onFileSelected()` in `apply-wizard.component.ts`) but doesn't do
-  anything with it yet — wire it into the `POST /api/affiliate/application`
-  multipart request.
+  anything with it yet. Two things to wire up once the backend exists:
+  1. Send it to `POST /api/affiliate/parse-insights-screenshot` right away
+     to pre-fill the followers/engagement/audience fields (see that
+     endpoint's docs above for the confidence-flagging behavior).
+  2. Include the same file in the final `POST /api/affiliate/application`
+     multipart request on submit, since the reviewer needs it too.
