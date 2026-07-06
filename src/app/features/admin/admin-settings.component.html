@@ -1,0 +1,61 @@
+<div class="flex items-center justify-between">
+  <h2 class="text-[15px] font-semibold text-ink">Influencer tier thresholds</h2>
+  <button type="button" (click)="reset()" class="rounded-lg border border-line px-3.5 py-2 text-[13px] font-semibold text-ink">
+    Reset to defaults
+  </button>
+</div>
+<p class="mt-1 text-[13.5px] text-muted">
+  Score cutoffs (0&ndash;100) that decide which tier a creator lands in, and the payout range shown on the Gigs
+  landing page for each tier. Changes take effect immediately for every creator's score.
+</p>
+
+<div class="mt-4 overflow-x-auto rounded-2xl border border-line bg-white">
+  <table class="w-full text-left text-[13.5px]">
+    <thead>
+      <tr class="border-b border-line text-[11px] font-semibold tracking-wide text-faint">
+        <th class="px-4 py-3">Tier</th>
+        <th class="px-4 py-3">Min score</th>
+        <th class="px-4 py-3">Max score</th>
+        <th class="px-4 py-3">Payout range (display text)</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (band of tierSettings.tierBands(); track band.tier) {
+        <tr class="border-b border-line last:border-0">
+          <td class="px-4 py-3 font-semibold text-ink">{{ band.tier }}</td>
+          <td class="px-4 py-3">
+            <input
+              type="number"
+              [value]="band.min"
+              (input)="updateMin(band.tier, $any($event.target).value)"
+              class="w-20 rounded-lg border border-line px-2 py-1.5 text-[13.5px] outline-none"
+            />
+          </td>
+          <td class="px-4 py-3">
+            <input
+              type="number"
+              [value]="band.max"
+              (input)="updateMax(band.tier, $any($event.target).value)"
+              class="w-20 rounded-lg border border-line px-2 py-1.5 text-[13.5px] outline-none"
+            />
+          </td>
+          <td class="px-4 py-3">
+            <input
+              type="text"
+              [value]="band.payout"
+              (input)="updatePayout(band.tier, $any($event.target).value)"
+              class="w-40 rounded-lg border border-line px-2 py-1.5 text-[13.5px] outline-none"
+            />
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+<div class="mt-6 rounded-2xl bg-panel p-4 text-[13px] text-muted">
+  This only edits the tier <em>cutoffs</em> and payout display text. The point weighting for individual metrics
+  (followers, engagement rate, content format, audience quality, tickets sold, etc.) is still fixed in
+  <code class="rounded bg-white px-1 py-0.5 text-[12px]">core/lib/scoring.ts</code> — making those bands editable
+  too is a natural next step if you want full control over the scoring model, not just the tier cutoffs.
+</div>

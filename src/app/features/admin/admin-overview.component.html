@@ -1,0 +1,42 @@
+<div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+  <div class="rounded-2xl border border-line bg-white p-5">
+    <p class="text-[11px] font-semibold tracking-wide text-faint">PROFILE STATUS</p>
+    <p class="mt-2 text-[22px] font-bold capitalize text-ink">{{ profileStatus().replace("_", " ") }}</p>
+  </div>
+  <div class="rounded-2xl border border-line bg-white p-5">
+    <p class="text-[11px] font-semibold tracking-wide text-faint">PENDING SHOW REQUESTS</p>
+    <p class="mt-2 text-[22px] font-bold text-ink">{{ pendingShowRequests() }}</p>
+  </div>
+  <div class="rounded-2xl border border-line bg-white p-5">
+    <p class="text-[11px] font-semibold tracking-wide text-faint">ACTIVE PROMO LINKS</p>
+    <p class="mt-2 text-[22px] font-bold text-ink">{{ approvedLinks().length }}</p>
+  </div>
+  <div class="rounded-2xl border border-line bg-white p-5">
+    <p class="text-[11px] font-semibold tracking-wide text-faint">SHOWS LISTED</p>
+    <p class="mt-2 text-[22px] font-bold text-ink">{{ totalShows() }}</p>
+  </div>
+</div>
+
+<div class="mt-6 rounded-2xl border border-line bg-white p-6">
+  <p class="text-[11px] font-semibold tracking-wide text-faint">LINK PERFORMANCE (ALL CREATORS)</p>
+  <div class="mt-4 grid grid-cols-3 gap-4 text-center">
+    <div>
+      <p class="text-[28px] font-bold text-ink">{{ aggregateStats().clicks }}</p>
+      <p class="text-[12px] text-faint">Total clicks</p>
+    </div>
+    <div>
+      <p class="text-[28px] font-bold text-ink">{{ aggregateStats().ticketsSold }}</p>
+      <p class="text-[12px] text-faint">Tickets sold</p>
+    </div>
+    <div>
+      <p class="text-[28px] font-bold text-accent">{{ formatCurrency(aggregateStats().commission) }}</p>
+      <p class="text-[12px] text-faint">Commission owed</p>
+    </div>
+  </div>
+</div>
+
+<div class="mt-6 rounded-2xl bg-panel p-4 text-[13px] text-muted">
+  This is a single-applicant local demo, so these numbers reflect just the one creator/application in this
+  browser's storage. In the real backend this aggregates across every applicant and gig application — see
+  <code class="rounded bg-white px-1 py-0.5 text-[12px]">docs/api-spec.md</code> for the endpoint shapes.
+</div>

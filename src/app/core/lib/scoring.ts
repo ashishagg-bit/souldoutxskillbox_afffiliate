@@ -46,9 +46,24 @@ const CONTENT_FORMAT_SCORE: Record<ContentFormat, number> = {
   "Stories only": 6,
 };
 
+export interface TierBand {
+  tier: Tier;
+  min: number;
+  max: number;
+  payout: string;
+}
+
+export const DEFAULT_TIER_BANDS: TierBand[] = [
+  { tier: "Bronze", min: 0, max: 39, payout: "₹2k–₹8k / gig" },
+  { tier: "Silver", min: 40, max: 59, payout: "₹5k–₹25k / gig" },
+  { tier: "Gold", min: 60, max: 79, payout: "₹12k–₹75k / gig" },
+  { tier: "Platinum", min: 80, max: 100, payout: "₹30k–₹3L / gig" },
+];
+
 export function computeScore(
   insights: InsightsInfo,
   performance: SkillboxPerformance,
+  tierBands: TierBand[] = DEFAULT_TIER_BANDS,
 ): ScoreBreakdown {
   const followers = scoreFromBands(insights.followers, FOLLOWER_BANDS);
   const engagement = scoreFromBands(insights.engagementRate, ENGAGEMENT_BANDS);
@@ -100,25 +115,16 @@ export function computeScore(
 
   return {
     total,
-    tier: tierForScore(total),
+    tier: tierForScore(total, tierBands),
     platformMetrics,
     skillboxPerformance,
   };
 }
 
-export function tierForScore(score: number): Tier {
-  if (score >= 80) return "Platinum";
-  if (score >= 60) return "Gold";
-  if (score >= 40) return "Silver";
-  return "Bronze";
+export function tierForScore(score: number, tierBands: TierBand[] = DEFAULT_TIER_BANDS): Tier {
+  const band = tierBands.find((b) => score >= b.min && score <= b.max);
+  return band?.tier ?? tierBands[0].tier;
 }
-
-export const TIER_BANDS: { tier: Tier; min: number; max: number; payout: string }[] = [
-  { tier: "Bronze", min: 0, max: 39, payout: "₹2k–₹8k / gig" },
-  { tier: "Silver", min: 40, max: 59, payout: "₹5k–₹25k / gig" },
-  { tier: "Gold", min: 60, max: 79, payout: "₹12k–₹75k / gig" },
-  { tier: "Platinum", min: 80, max: 100, payout: "₹30k–₹3L / gig" },
-];
 
 export const TIER_ORDER: Tier[] = ["Bronze", "Silver", "Gold", "Platinum"];
 

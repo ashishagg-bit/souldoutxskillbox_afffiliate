@@ -1,0 +1,46 @@
+<div class="min-h-screen bg-[#f5f5f6]">
+  <div class="border-b border-line bg-white px-6 py-5">
+    <div class="mx-auto max-w-5xl">
+      <p class="text-[13px] font-semibold tracking-wide text-faint">SKILLBOX INTERNAL</p>
+      <h1 class="text-[24px] font-bold text-ink">Affiliate admin</h1>
+    </div>
+  </div>
+
+  <div class="border-b border-line bg-white px-6">
+    <div class="mx-auto flex max-w-5xl gap-1">
+      @for (t of tabs; track t.id) {
+        <button
+          type="button"
+          (click)="setTab(t.id)"
+          class="border-b-2 px-4 py-3 text-[14px] font-medium"
+          [class.border-accent]="tab() === t.id"
+          [class.text-ink]="tab() === t.id"
+          [class.border-transparent]="tab() !== t.id"
+          [class.text-faint]="tab() !== t.id"
+        >
+          {{ t.label }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <div class="mx-auto max-w-5xl px-6 py-8">
+    @switch (tab()) {
+      @case ("overview") {
+        <app-admin-overview />
+      }
+      @case ("applications") {
+        <app-admin-review />
+      }
+      @case ("shows") {
+        <app-admin-shows />
+      }
+      @case ("analytics") {
+        <app-admin-analytics />
+      }
+      @case ("settings") {
+        <app-admin-settings />
+      }
+    }
+  </div>
+</div>

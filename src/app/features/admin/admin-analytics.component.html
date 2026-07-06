@@ -1,0 +1,54 @@
+<h2 class="text-[15px] font-semibold text-ink">Link performance</h2>
+<p class="mt-1 text-[13.5px] text-muted">
+  Every active creator tracking link, with clicks, tickets sold, and commission owed.
+</p>
+
+@if (rows().length === 0) {
+  <p class="mt-6 text-[14px] text-muted">No approved promo links yet.</p>
+} @else {
+  <div class="mt-4 overflow-x-auto rounded-2xl border border-line bg-white">
+    <table class="w-full text-left text-[13.5px]">
+      <thead>
+        <tr class="border-b border-line text-[11px] font-semibold tracking-wide text-faint">
+          <th class="px-4 py-3">Creator</th>
+          <th class="px-4 py-3">Show</th>
+          <th class="px-4 py-3">Link</th>
+          <th class="px-4 py-3 text-right">Clicks</th>
+          <th class="px-4 py-3 text-right">Tickets sold</th>
+          <th class="px-4 py-3 text-right">Commission</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track row.referralCode) {
+          <tr class="border-b border-line last:border-0">
+            <td class="px-4 py-3 font-medium text-ink">&#64;{{ row.creatorHandle }}</td>
+            <td class="px-4 py-3 text-ink">{{ row.gig.title }}</td>
+            <td class="px-4 py-3">
+              <code class="text-[12.5px] text-muted">{{ row.link }}</code>
+            </td>
+            <td class="px-4 py-3 text-right text-ink">{{ row.clicks }}</td>
+            <td class="px-4 py-3 text-right text-ink">{{ row.ticketsSold }}</td>
+            <td class="px-4 py-3 text-right font-semibold text-accent">{{ formatCurrency(row.commissionEarned) }}</td>
+          </tr>
+        }
+      </tbody>
+      <tfoot>
+        <tr class="bg-panel font-semibold">
+          <td class="px-4 py-3 text-ink" colspan="3">Total</td>
+          <td class="px-4 py-3 text-right text-ink">{{ totals().clicks }}</td>
+          <td class="px-4 py-3 text-right text-ink">{{ totals().ticketsSold }}</td>
+          <td class="px-4 py-3 text-right text-accent">{{ formatCurrency(totals().commission) }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+}
+
+<div class="mt-6 rounded-2xl bg-panel p-4 text-[13px] text-muted">
+  Clicks/tickets-sold/commission here are deterministically fabricated from each referral code
+  (<code class="rounded bg-white px-1 py-0.5 text-[12px]">mockLinkStats()</code> in
+  <code class="rounded bg-white px-1 py-0.5 text-[12px]">core/lib/referral.ts</code>), not real click tracking.
+  See the <code class="rounded bg-white px-1 py-0.5 text-[12px]">referral_clicks</code> /
+  <code class="rounded bg-white px-1 py-0.5 text-[12px]">referral_conversions</code> tables in
+  <code class="rounded bg-white px-1 py-0.5 text-[12px]">docs/api-spec.md</code> for the real design.
+</div>

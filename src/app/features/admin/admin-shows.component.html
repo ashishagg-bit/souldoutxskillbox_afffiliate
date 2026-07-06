@@ -1,0 +1,192 @@
+<div class="flex items-center justify-between">
+  <h2 class="text-[15px] font-semibold text-ink">
+    Shows in the marketplace
+    <span class="ml-1 text-[13px] font-normal text-faint">({{ gigsService.gigs().length }})</span>
+  </h2>
+  <button
+    type="button"
+    (click)="startCreate()"
+    class="rounded-lg bg-black px-4 py-2 text-[13px] font-semibold text-white"
+  >
+    + Add show
+  </button>
+</div>
+
+@if (formOpen()) {
+  @let d = draft();
+  <div class="mt-4 rounded-2xl border border-line bg-white p-6">
+    <h3 class="text-[14px] font-semibold text-ink">{{ editingId() ? "Edit show" : "New show" }}</h3>
+
+    <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div class="sm:col-span-2">
+        <label class="text-[12px] text-muted">Title</label>
+        <input
+          type="text"
+          [value]="d.title"
+          (input)="updateDraft({ title: $any($event.target).value })"
+          class="mt-1 w-full rounded-lg border border-line px-3 py-2 text-[14px] outline-none"
+        />
+      </div>
+
+      <div>
+        <label class="text-[12px] text-muted">Type</label>
+        <select
+          [value]="d.type"
+          (change)="updateDraft({ type: $any($event.target).value })"
+          class="mt-1 w-full rounded-lg border border-line px-3 py-2 text-[14px] outline-none"
+        >
+          @for (t of gigTypes; track t) {
+            <option [value]="t">{{ t }}</option>
+          }
+        </select>
+      </div>
+
+      <div>
+        <label class="text-[12px] text-muted">Minimum tier</label>
+        <select
+          [value]="d.minTier"
+          (change)="updateDraft({ minTier: $any($event.target).value })"
+          class="mt-1 w-full rounded-lg border border-line px-3 py-2 text-[14px] outline-none"
+        >
+          @for (t of tiers; track t) {
+            <option [value]="t">{{ t }}</option>
+          }
+        </select>
+      </div>
+
+      <div>
+        <label class="text-[12px] text-muted">Minimum score</label>
+        <input
+          type="number"
+          [value]="d.minScore"
+          (input)="updateDraft({ minScore: toNumber($any($event.target).value) || 0 })"
+          class="mt-1 w-full rounded-lg border border-line px-3 py-2 text-[14px] outline-none"
+        />
+      </div>
+
+      <div>
+        <label class="text-[12px] text-muted">Location</label>
+        <input
+          type="text"
+          [value]="d.location"
+          (input)="updateDraft({ location: $any($event.target).value })"
+          class="mt-1 w-full rounded-lg border border-line px-3 py-2 text-[14px] outline-none"
+        />
+      </div>
+
+      <div>
+        <label class="text-[12px] text-muted">Date (free text)</label>
+        <input
+          type="text"
+          placeholder="e.g. 22 Feb or 14-16 Mar"
+          [value]="d.date"
+          (input)="updateDraft({ date: $any($event.target).value })"
+          class="mt-1 w-full rounded-lg border border-line px-3 py-2 text-[14px] outline-none"
+        />
+      </div>
+
+      <div>
+        <label class="text-[12px] text-muted">Spots left (optional)</label>
+        <input
+          type="number"
+          [value]="d.spotsLeft ?? ''"
+          (input)="updateDraft({ spotsLeft: toNumber($any($event.target).value) || undefined })"
+          class="mt-1 w-full rounded-lg border border-line px-3 py-2 text-[14px] outline-none"
+        />
+      </div>
+
+      <div>
+        <label class="text-[12px] text-muted">Deliverable (optional)</label>
+        <input
+          type="text"
+          placeholder="e.g. 3 Reels · 30 sec each"
+          [value]="d.deliverable"
+          (input)="updateDraft({ deliverable: $any($event.target).value })"
+          class="mt-1 w-full rounded-lg border border-line px-3 py-2 text-[14px] outline-none"
+        />
+      </div>
+
+      <div>
+        <label class="text-[12px] text-muted">Payout min (&#8377;)</label>
+        <input
+          type="number"
+          [value]="d.payoutMin"
+          (input)="updateDraft({ payoutMin: toNumber($any($event.target).value) || 0 })"
+          class="mt-1 w-full rounded-lg border border-line px-3 py-2 text-[14px] outline-none"
+        />
+      </div>
+
+      <div>
+        <label class="text-[12px] text-muted">Payout max (&#8377;)</label>
+        <input
+          type="number"
+          [value]="d.payoutMax"
+          (input)="updateDraft({ payoutMax: toNumber($any($event.target).value) || 0 })"
+          class="mt-1 w-full rounded-lg border border-line px-3 py-2 text-[14px] outline-none"
+        />
+      </div>
+
+      <div class="sm:col-span-2 rounded-lg bg-panel p-3">
+        <p class="text-[12px] font-semibold text-ink">Per-ticket commission (optional)</p>
+        <p class="text-[11px] text-muted">
+          Set both to make this a link-promotable show (Story coverage / Attendance). Leave blank for a flat-fee
+          content gig (UGC / Brand campaign).
+        </p>
+        <div class="mt-2 grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-[12px] text-muted">Ticket price (&#8377;)</label>
+            <input
+              type="number"
+              [value]="d.ticketPrice ?? ''"
+              (input)="updateDraft({ ticketPrice: toNumber($any($event.target).value) || undefined })"
+              class="mt-1 w-full rounded-lg border border-line bg-white px-3 py-2 text-[14px] outline-none"
+            />
+          </div>
+          <div>
+            <label class="text-[12px] text-muted">Commission rate (%)</label>
+            <input
+              type="number"
+              [value]="d.commissionRate ?? ''"
+              (input)="updateDraft({ commissionRate: toNumber($any($event.target).value) || undefined })"
+              class="mt-1 w-full rounded-lg border border-line bg-white px-3 py-2 text-[14px] outline-none"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-5 flex gap-2">
+      <button type="button" (click)="save()" class="rounded-lg bg-black px-4 py-2 text-[13.5px] font-semibold text-white">
+        {{ editingId() ? "Save changes" : "Create show" }}
+      </button>
+      <button type="button" (click)="cancel()" class="rounded-lg border border-line px-4 py-2 text-[13.5px] font-semibold text-ink">
+        Cancel
+      </button>
+    </div>
+  </div>
+}
+
+<div class="mt-4 flex flex-col gap-3">
+  @for (gig of gigsService.gigs(); track gig.id) {
+    <div class="flex items-center justify-between rounded-xl border border-line bg-white px-4 py-3">
+      <div>
+        <p class="text-[14px] font-semibold text-ink">{{ gig.title }}</p>
+        <p class="text-[12.5px] text-muted">
+          {{ gig.type }} &middot; requires {{ gig.minTier }}+ (score {{ gig.minScore }}) &middot;
+          {{ formatPayout(gig) }}
+          @if (gig.ticketPrice && gig.commissionRate) {
+            &middot; {{ gig.commissionRate }}% commission on &#8377;{{ gig.ticketPrice }} tickets
+          }
+        </p>
+      </div>
+      <div class="flex shrink-0 gap-2">
+        <button type="button" (click)="startEdit(gig)" class="rounded-lg border border-line px-3.5 py-2 text-[13px] font-semibold text-ink">
+          Edit
+        </button>
+        <button type="button" (click)="remove(gig)" class="rounded-lg border border-line px-3.5 py-2 text-[13px] font-semibold text-red-700">
+          Delete
+        </button>
+      </div>
+    </div>
+  }
+</div>

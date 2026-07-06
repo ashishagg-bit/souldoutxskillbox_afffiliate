@@ -362,6 +362,28 @@ insert).
 Sets `status = 'rejected'`, same timestamp/reviewer fields. No referral
 code is ever generated for a rejected application.
 
+### Shows CRUD
+Backs the admin panel's "Shows" tab (`AdminShowsComponent`) — full CRUD on
+the `gigs` table:
+
+- `POST /api/admin/gigs` — create, body matches the `gigs` columns above
+  (`ticket_price`/`commission_rate` optional; this is where the commission
+  model per show gets decided).
+- `PATCH /api/admin/gigs/{id}` — partial update, same shape.
+- `DELETE /api/admin/gigs/{id}` — remove a show from the marketplace.
+  Consider soft-deleting instead if any creators already have approved gig
+  applications against it, so their existing links/stats don't orphan.
+
+### Tier settings
+
+- `GET /api/admin/tier-settings` — returns the four `{ tier, min, max, payout }`
+  rows backing the "Settings" tab (`AdminSettingsComponent`).
+- `PATCH /api/admin/tier-settings/{tier}` — update one tier's `min`/`max`/`payout`.
+  `AffiliateScoringService::tierForScore()` should read these at score time
+  rather than hardcoding the cutoffs, mirroring `tierForScore(score, tierBands)`
+  in `core/lib/scoring.ts` — a settings change here immediately changes every
+  creator's tier on next score computation, with no migration needed.
+
 ## Frontend integration notes
 
 - `ApplicationStateService` currently persists to `localStorage` under key
@@ -372,8 +394,17 @@ code is ever generated for a rejected application.
   `window.addEventListener("storage", ...)` cross-tab sync block in its
   constructor once real data comes from the network instead of
   `localStorage` — polling or a websocket subscription replaces it.
-- `GigsService.getAll()` currently returns the hardcoded array in
-  `src/app/core/data/gigs.ts`. Point it at `GET /api/gigs` instead.
+- `GigsService` now holds gigs in a signal seeded from
+  `src/app/core/data/gigs.ts` and persisted to `localStorage`
+  (`addGig()`/`updateGig()`/`deleteGig()` back the admin "Shows" tab).
+  Point `getAll()`/`getById()` at `GET /api/gigs`/`GET /api/gigs/{id}` and
+  the three mutators at the Shows CRUD endpoints above; drop its
+  `localStorage`/`storage`-event plumbing the same way as
+  `ApplicationStateService`.
+- `TierSettingsService` similarly holds the tier cutoffs in a
+  `localStorage`-backed signal. Point `tierBands()` at
+  `GET /api/admin/tier-settings` and `updateBand()` at
+  `PATCH /api/admin/tier-settings/{tier}`.
 - The score `computed()` signal in `ApplicationStateService` currently runs
   `computeScore()` client-side against locally-entered numbers. Once the
   backend is live, prefer `GET /api/affiliate/score` as the source of truth

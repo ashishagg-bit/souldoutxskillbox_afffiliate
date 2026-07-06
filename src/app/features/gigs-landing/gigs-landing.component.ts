@@ -2,7 +2,7 @@ import { Component, inject } from "@angular/core";
 import { Router } from "@angular/router";
 import { PhoneShellComponent } from "../../shared/phone-shell/phone-shell.component";
 import { ApplicationStateService } from "../../core/state/application-state.service";
-import { TIER_BANDS } from "../../core/lib/scoring";
+import { TierSettingsService } from "../../core/state/tier-settings.service";
 
 @Component({
   selector: "app-gigs-landing",
@@ -13,8 +13,9 @@ import { TIER_BANDS } from "../../core/lib/scoring";
 export class GigsLandingComponent {
   private readonly router = inject(Router);
   private readonly appState = inject(ApplicationStateService);
+  private readonly tierSettings = inject(TierSettingsService);
 
-  readonly tierBands = TIER_BANDS;
+  readonly tierBands = this.tierSettings.tierBands;
 
   readonly categories = [
     {

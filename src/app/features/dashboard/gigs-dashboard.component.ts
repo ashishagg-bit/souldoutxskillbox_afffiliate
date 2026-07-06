@@ -25,18 +25,17 @@ export class GigsDashboardComponent {
   readonly tierStyles = TIER_STYLES;
   readonly gigFilters: GigFilter[] = ["All", "Story coverage", "Attendance", "UGC", "Brand campaign"];
 
-  private readonly allGigs = this.gigsService.getAll();
-
   readonly profileApproved = computed(() => this.appState.application().status === "approved");
 
   readonly filteredGigs = computed(() => {
     const f = this.filter();
-    return f === "All" ? this.allGigs : this.allGigs.filter((g) => g.type === f);
+    const all = this.gigsService.gigs();
+    return f === "All" ? all : all.filter((g) => g.type === f);
   });
 
   readonly myGigs = computed<Gig[]>(() => {
     const appliedIds = this.appState.application().appliedGigs.map((a) => a.gigId);
-    return this.allGigs.filter((g) => appliedIds.includes(g.id));
+    return this.gigsService.gigs().filter((g) => appliedIds.includes(g.id));
   });
 
   setTab(tab: DashboardTab) {
