@@ -2,6 +2,7 @@ import { Injectable, computed, effect, inject, signal } from "@angular/core";
 import { computeScore } from "../lib/scoring";
 import { generateReferralCode } from "../lib/referral";
 import { TierSettingsService } from "./tier-settings.service";
+import { ScoringWeightsService } from "./scoring-weights.service";
 import type {
   AffiliateApplication,
   City,
@@ -60,11 +61,17 @@ function loadInitial(): AffiliateApplication {
 export class ApplicationStateService {
   private readonly state = signal<AffiliateApplication>(loadInitial());
   private readonly tierSettings = inject(TierSettingsService);
+  private readonly scoringWeights = inject(ScoringWeightsService);
 
   readonly application = this.state.asReadonly();
 
   readonly score = computed<ScoreBreakdown>(() =>
-    computeScore(this.state().insights, this.state().performance, this.tierSettings.tierBands()),
+    computeScore(
+      this.state().insights,
+      this.state().performance,
+      this.tierSettings.tierBands(),
+      this.scoringWeights.weights(),
+    ),
   );
 
   constructor() {

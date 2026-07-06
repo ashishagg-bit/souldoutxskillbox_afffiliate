@@ -384,6 +384,26 @@ the `gigs` table:
   in `core/lib/scoring.ts` — a settings change here immediately changes every
   creator's tier on next score computation, with no migration needed.
 
+### Scoring weights
+
+- `GET /api/admin/scoring-weights` — returns the 8 point-ceiling values
+  (`followers`, `engagement_rate`, `platform`, `audience_quality`,
+  `tickets_sold`, `content_approval_rate`, `gigs_completed`, `active`) that
+  back the "Scoring weights" section of the Settings tab.
+- `PATCH /api/admin/scoring-weights` — update one or more of them.
+
+These are the `max` values in `GET /api/affiliate/score`'s response
+(`ScoreBreakdownItem.max`) - a weight change immediately changes every
+creator's `total` on next computation. `AffiliateScoringService` should
+rescale each metric's raw earned value against its base ceiling the same
+way `rescale()` does in `core/lib/scoring.ts` (never redefine the band
+*shapes* themselves - only the ceiling each band's progress is measured
+against). The frontend deliberately warns the admin in-UI when the 8
+weights don't sum to 100, since the tier cutoffs above are meant to read
+against a 0-100 scale - keep that validation (or a hard constraint) on the
+backend too if you don't want reviewers accidentally creating a confusing
+scoring model.
+
 ## Frontend integration notes
 
 - `ApplicationStateService` currently persists to `localStorage` under key
@@ -405,6 +425,10 @@ the `gigs` table:
   `localStorage`-backed signal. Point `tierBands()` at
   `GET /api/admin/tier-settings` and `updateBand()` at
   `PATCH /api/admin/tier-settings/{tier}`.
+- `ScoringWeightsService` (`core/state/scoring-weights.service.ts`) holds
+  the 8 metric point-ceilings the same way. Point `weights()` at
+  `GET /api/admin/scoring-weights` and `updateWeight()` at
+  `PATCH /api/admin/scoring-weights`.
 - The score `computed()` signal in `ApplicationStateService` currently runs
   `computeScore()` client-side against locally-entered numbers. Once the
   backend is live, prefer `GET /api/affiliate/score` as the source of truth
