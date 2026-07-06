@@ -1,0 +1,9 @@
+<div class="flex gap-1.5 px-5 pt-4">
+  @for (i of [].constructor(total()); track $index) {
+    <div
+      class="h-1 flex-1 rounded-full"
+      [class.bg-ink]="$index < current()"
+      [class.bg-line]="$index >= current()"
+    ></div>
+  }
+</div>

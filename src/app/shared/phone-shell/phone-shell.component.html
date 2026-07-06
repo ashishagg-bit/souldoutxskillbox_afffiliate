@@ -1,0 +1,13 @@
+<div class="flex min-h-screen w-full justify-center bg-[#e9e9ec] py-0 sm:py-6">
+  <div
+    class="relative flex h-screen w-full max-w-[430px] flex-col overflow-hidden bg-white sm:h-[850px] sm:rounded-[36px] sm:shadow-2xl"
+  >
+    <div class="h-9 shrink-0 bg-black"></div>
+    <div class="no-scrollbar flex-1 overflow-y-auto">
+      <ng-content />
+    </div>
+    @if (showBottomNav()) {
+      <app-bottom-nav [active]="activeTab()" />
+    }
+  </div>
+</div>

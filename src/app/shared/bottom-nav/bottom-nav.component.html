@@ -1,0 +1,40 @@
+<nav class="flex shrink-0 items-stretch border-t border-line bg-white">
+  @for (tab of tabs; track tab.label) {
+    <a
+      [routerLink]="tab.link"
+      class="flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px]"
+      [class.text-ink]="active() === tab.label"
+      [class.text-faint]="active() !== tab.label"
+    >
+      @switch (tab.label) {
+        @case ("Home") {
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M3 11.5 12 4l9 7.5" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        }
+        @case ("Events") {
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <rect x="3.5" y="5" width="17" height="15" rx="2" />
+            <path d="M3.5 9.5h17M8 3v3.2M16 3v3.2" stroke-linecap="round" />
+          </svg>
+        }
+        @case ("Search") {
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <circle cx="10.5" cy="10.5" r="6.5" />
+            <path d="m20 20-4.6-4.6" stroke-linecap="round" />
+          </svg>
+        }
+        @case ("More") {
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <rect x="3.5" y="3.5" width="7" height="7" rx="1.2" />
+            <rect x="13.5" y="3.5" width="7" height="7" rx="1.2" />
+            <rect x="3.5" y="13.5" width="7" height="7" rx="1.2" />
+            <rect x="13.5" y="13.5" width="7" height="7" rx="1.2" />
+          </svg>
+        }
+      }
+      <span>{{ tab.label }}</span>
+    </a>
+  }
+</nav>
