@@ -49,8 +49,10 @@ export class GigsLandingComponent {
 
   goToApply() {
     const status = this.appState.application().status;
-    if (status === "scored") {
+    if (status === "approved") {
       this.router.navigateByUrl("/gigs/dashboard");
+    } else if (status === "under_review" || status === "rejected") {
+      this.router.navigateByUrl("/gigs/status");
     } else {
       this.router.navigateByUrl("/gigs/apply");
     }

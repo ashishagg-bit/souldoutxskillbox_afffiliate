@@ -1,0 +1,146 @@
+<div class="min-h-screen bg-[#f5f5f6] px-6 py-8">
+  <div class="mx-auto max-w-3xl">
+    <div class="mb-6">
+      <p class="text-[13px] font-semibold tracking-wide text-faint">SKILLBOX INTERNAL</p>
+      <h1 class="text-[24px] font-bold text-ink">Affiliate application review</h1>
+      <p class="mt-1 text-[14px] text-muted">
+        Reviewer tools for approving creator profiles and their per-show promotion requests.
+      </p>
+    </div>
+
+    <section class="mb-8 rounded-2xl border border-line bg-white p-6">
+      <h2 class="text-[15px] font-semibold text-ink">Profile application</h2>
+
+      @let application = appState.application();
+
+      @if (application.status === "not_applied") {
+        <p class="mt-3 text-[14px] text-muted">No application submitted yet.</p>
+      } @else {
+        <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div>
+            <p class="text-[11px] text-faint">Instagram</p>
+            <p class="text-[14px] font-medium text-ink">&#64;{{ application.socials.instagramHandle }}</p>
+          </div>
+          <div>
+            <p class="text-[11px] text-faint">Platforms</p>
+            <p class="text-[14px] font-medium text-ink">{{ application.socials.platforms.join(", ") }}</p>
+          </div>
+          <div>
+            <p class="text-[11px] text-faint">City / Niche</p>
+            <p class="text-[14px] font-medium text-ink">
+              {{ application.locationNiche.city }} &middot; {{ application.locationNiche.niche }}
+            </p>
+          </div>
+          <div>
+            <p class="text-[11px] text-faint">AI score</p>
+            <p class="text-[14px] font-medium text-ink">
+              {{ appState.score().total }}/100 &middot;
+              <span class="{{ tierStyles[appState.score().tier].text }}">{{ appState.score().tier }}</span>
+            </p>
+          </div>
+        </div>
+
+        <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          @for (item of appState.score().platformMetrics; track item.label) {
+            <div class="rounded-lg bg-panel px-3 py-2">
+              <p class="text-[11px] text-faint">{{ item.label }}</p>
+              <p class="text-[13px] font-semibold text-ink">{{ item.earned }}/{{ item.max }}</p>
+            </div>
+          }
+        </div>
+
+        <div class="mt-5 flex items-center gap-3">
+          <span
+            class="rounded-full px-3 py-1 text-[12px] font-semibold"
+            [class.bg-amber-100]="application.status === 'under_review'"
+            [class.text-amber-800]="application.status === 'under_review'"
+            [class.bg-emerald-100]="application.status === 'approved'"
+            [class.text-emerald-800]="application.status === 'approved'"
+            [class.bg-gray-200]="application.status === 'rejected'"
+            [class.text-gray-700]="application.status === 'rejected'"
+          >
+            {{ application.status === "under_review" ? "Pending review" : application.status === "approved" ? "Approved" : "Rejected" }}
+          </span>
+
+          @if (application.status === "under_review") {
+            <button
+              type="button"
+              (click)="approveProfile()"
+              class="ml-auto rounded-lg bg-black px-4 py-2 text-[13.5px] font-semibold text-white"
+            >
+              Approve profile
+            </button>
+            <button
+              type="button"
+              (click)="rejectProfile()"
+              class="rounded-lg border border-line px-4 py-2 text-[13.5px] font-semibold text-ink"
+            >
+              Reject
+            </button>
+          }
+        </div>
+      }
+    </section>
+
+    <section class="rounded-2xl border border-line bg-white p-6">
+      <h2 class="text-[15px] font-semibold text-ink">
+        Pending show-promotion requests
+        <span class="ml-1 text-[13px] font-normal text-faint">({{ pendingGigApplications().length }})</span>
+      </h2>
+
+      @if (pendingGigApplications().length === 0) {
+        <p class="mt-3 text-[14px] text-muted">Nothing waiting on review.</p>
+      } @else {
+        <div class="mt-4 flex flex-col gap-3">
+          @for (row of pendingGigApplications(); track row.gig.id) {
+            <div class="flex items-center justify-between rounded-xl border border-line px-4 py-3">
+              <div>
+                <p class="text-[14px] font-semibold text-ink">{{ row.gig.title }}</p>
+                <p class="text-[12.5px] text-muted">
+                  {{ row.gig.type }} &middot; requires {{ row.gig.minTier }}+ &middot; applied
+                  {{ row.applied.appliedAt | date: "MMM d, h:mm a" }}
+                </p>
+              </div>
+              <div class="flex shrink-0 gap-2">
+                <button
+                  type="button"
+                  (click)="approveGig(row.gig.id)"
+                  class="rounded-lg bg-black px-3.5 py-2 text-[13px] font-semibold text-white"
+                >
+                  Approve
+                </button>
+                <button
+                  type="button"
+                  (click)="rejectGig(row.gig.id)"
+                  class="rounded-lg border border-line px-3.5 py-2 text-[13px] font-semibold text-ink"
+                >
+                  Reject
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      @if (reviewedGigApplications().length > 0) {
+        <h3 class="mt-6 text-[13px] font-semibold text-faint">Already reviewed</h3>
+        <div class="mt-3 flex flex-col gap-2">
+          @for (row of reviewedGigApplications(); track row.gig.id) {
+            <div class="flex items-center justify-between rounded-xl bg-panel px-4 py-2.5">
+              <p class="text-[13.5px] text-ink">{{ row.gig.title }}</p>
+              <span
+                class="rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+                [class.bg-emerald-100]="row.applied.status === 'approved'"
+                [class.text-emerald-800]="row.applied.status === 'approved'"
+                [class.bg-gray-200]="row.applied.status === 'rejected'"
+                [class.text-gray-700]="row.applied.status === 'rejected'"
+              >
+                {{ row.applied.status === "approved" ? "Approved" : "Rejected" }}
+              </span>
+            </div>
+          }
+        </div>
+      }
+    </section>
+  </div>
+</div>

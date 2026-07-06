@@ -22,7 +22,9 @@ export type Niche =
 
 export type Tier = "Bronze" | "Silver" | "Gold" | "Platinum";
 
-export type ApplicationStatus = "not_applied" | "submitted" | "scored";
+export type ApplicationStatus = "not_applied" | "under_review" | "approved" | "rejected";
+
+export type GigApplicationStatus = "pending" | "approved" | "rejected";
 
 export interface SocialsInfo {
   instagramHandle: string;
@@ -77,11 +79,19 @@ export interface Gig {
   deliverable?: string;
   payoutMin: number;
   payoutMax: number;
+  /** Set only for gigs paid via per-ticket referral commission (Story coverage / Attendance). */
+  ticketPrice?: number;
+  /** Percent of ticketPrice earned per ticket sold through the creator's link. */
+  commissionRate?: number;
 }
 
 export interface AppliedGig {
   gigId: string;
   appliedAt: string;
+  status: GigApplicationStatus;
+  reviewedAt: string | null;
+  /** Assigned once status becomes "approved" - the code embedded in the creator's unique promo link. */
+  referralCode: string | null;
 }
 
 export interface AffiliateApplication {

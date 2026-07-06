@@ -1,5 +1,6 @@
 import { Injectable, computed, effect, signal } from "@angular/core";
 import { computeScore } from "../lib/scoring";
+import { generateReferralCode } from "../lib/referral";
 import type {
   AffiliateApplication,
   City,
@@ -9,7 +10,7 @@ import type {
   ScoreBreakdown,
 } from "../lib/types";
 
-const STORAGE_KEY = "skillbox.affiliate.application.v1";
+const STORAGE_KEY = "skillbox.affiliate.application.v2";
 
 const EMPTY_APPLICATION: AffiliateApplication = {
   status: "not_applied",
@@ -48,6 +49,11 @@ function loadInitial(): AffiliateApplication {
  * is fully demoable without a backend. Every mutation here has a 1:1 candidate
  * Laravel endpoint documented in docs/api-spec.md - swap the bodies for HTTP
  * calls once that API exists, the component layer doesn't need to change.
+ *
+ * There's only ever one applicant in this local store (no real accounts yet),
+ * so the "admin" review screen reads and mutates this same state - it's
+ * standing in for what would be a separate reviewer looking at a queue of
+ * many applicants' rows in the real backend.
  */
 @Injectable({ providedIn: "root" })
 export class ApplicationStateService {
@@ -62,6 +68,16 @@ export class ApplicationStateService {
   constructor() {
     effect(() => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state()));
+    });
+
+    // Cross-tab sync for this demo's local store: the "storage" event only fires in
+    // OTHER tabs than the one that wrote the change, so an admin approving in one tab
+    // reflects live in a creator tab open on the same browser, without a reload.
+    // A real backend would replace this with polling/websockets against the API.
+    window.addEventListener("storage", (event) => {
+      if (event.key === STORAGE_KEY && event.newValue) {
+        this.state.set({ ...structuredClone(EMPTY_APPLICATION), ...JSON.parse(event.newValue) });
+      }
     });
   }
 
@@ -95,16 +111,62 @@ export class ApplicationStateService {
     this.state.update((prev) => ({ ...prev, insights: { ...prev.insights, contentFormat: format } }));
   }
 
+  /** Creator action: step-4 "Submit application" - profile now awaits Skillbox review. */
   submitApplication() {
     const now = new Date().toISOString();
-    this.state.update((prev) => ({ ...prev, status: "scored", submittedAt: now, scoredAt: now }));
+    this.state.update((prev) => ({ ...prev, status: "under_review", submittedAt: now, scoredAt: null }));
   }
 
+  /** Admin action: reviewer confirms the AI-derived tier is right and unlocks the marketplace. */
+  approveApplication() {
+    this.state.update((prev) => ({ ...prev, status: "approved", scoredAt: new Date().toISOString() }));
+  }
+
+  /** Admin action: reviewer rejects the profile (bad-fit audience, fake followers, etc). */
+  rejectApplication() {
+    this.state.update((prev) => ({ ...prev, status: "rejected", scoredAt: new Date().toISOString() }));
+  }
+
+  /** Creator action: apply to promote a specific show - starts pending, not yet approved. */
   applyToGig(gigId: string) {
     this.state.update((prev) => {
       if (prev.appliedGigs.some((g) => g.gigId === gigId)) return prev;
-      return { ...prev, appliedGigs: [...prev.appliedGigs, { gigId, appliedAt: new Date().toISOString() }] };
+      const applied: AffiliateApplication["appliedGigs"][number] = {
+        gigId,
+        appliedAt: new Date().toISOString(),
+        status: "pending",
+        reviewedAt: null,
+        referralCode: null,
+      };
+      return { ...prev, appliedGigs: [...prev.appliedGigs, applied] };
     });
+  }
+
+  /** Admin action: approves a creator to promote this show and issues their unique tracking link. */
+  approveGigApplication(gigId: string) {
+    this.state.update((prev) => ({
+      ...prev,
+      appliedGigs: prev.appliedGigs.map((g) =>
+        g.gigId === gigId
+          ? {
+              ...g,
+              status: "approved",
+              reviewedAt: new Date().toISOString(),
+              referralCode: generateReferralCode(prev.socials.instagramHandle, gigId),
+            }
+          : g,
+      ),
+    }));
+  }
+
+  /** Admin action: rejects a creator's request to promote this specific show. */
+  rejectGigApplication(gigId: string) {
+    this.state.update((prev) => ({
+      ...prev,
+      appliedGigs: prev.appliedGigs.map((g) =>
+        g.gigId === gigId ? { ...g, status: "rejected", reviewedAt: new Date().toISOString() } : g,
+      ),
+    }));
   }
 
   resetApplication() {

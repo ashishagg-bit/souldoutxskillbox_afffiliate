@@ -35,9 +35,26 @@
     </button>
   </div>
 
+  @if (!profileApproved() && tab() !== "score") {
+    <div class="mx-5 mt-4 rounded-xl bg-amber-50 px-4 py-3 text-[13px] text-amber-900">
+      Your profile is still pending Skillbox review. You can preview gigs below, but Apply stays locked until
+      you're approved.
+    </div>
+  }
+
   @switch (tab()) {
     @case ("score") {
       <div class="p-5">
+        @if (!profileApproved()) {
+          <div class="mb-4 rounded-xl bg-amber-50 px-4 py-3 text-[13px] text-amber-900">
+            @if (appState.application().status === "rejected") {
+              Your profile was not approved. This score is a preview only.
+            } @else {
+              This score is a live preview based on what you entered &mdash; it becomes official once a Skillbox
+              reviewer approves your profile.
+            }
+          </div>
+        }
         <div class="rounded-2xl bg-black px-6 py-8 text-center">
           <span class="rounded-full px-3 py-1 text-[11px] font-bold tracking-wide text-white {{ tierStyles[appState.score().tier].solid }}">
             {{ appState.score().tier.toUpperCase() }} TIER
@@ -117,7 +134,7 @@
       <div class="flex flex-col gap-4 px-5 pb-8">
         @for (gig of filteredGigs(); track gig.id) {
           @let eligible = isEligible(gig);
-          @let applied = hasApplied(gig);
+          @let gigStat = gigStatus(gig);
           <div class="overflow-hidden rounded-2xl border border-line">
             <div class="flex items-center justify-between px-4 py-3" [class.bg-black]="eligible" [class.bg-gray-400]="!eligible">
               <span class="text-[11px] font-bold tracking-wide text-white">{{ gig.type.toUpperCase() }}</span>
@@ -147,6 +164,11 @@
                   <span>{{ gig.spotsLeft }} spots left</span>
                 }
               </p>
+              @if (gig.ticketPrice && gig.commissionRate) {
+                <p class="mt-1 text-[12px] text-muted">
+                  Promote with your unique link &middot; earn {{ gig.commissionRate }}% per ticket sold
+                </p>
+              }
 
               <div class="mt-3 flex items-end justify-between">
                 <div>
@@ -159,17 +181,31 @@
                 </div>
                 <button
                   type="button"
-                  [disabled]="!eligible || applied"
+                  [disabled]="!eligible || !!gigStat"
                   (click)="apply(gig)"
                   class="rounded-xl px-5 py-2.5 text-[13.5px] font-semibold"
-                  [class.bg-black]="eligible && !applied"
+                  [class.bg-black]="eligible && !gigStat"
                   [class.text-white]="eligible"
                   [class.bg-gray-200]="!eligible"
                   [class.text-gray-400]="!eligible"
-                  [class.bg-gray-100]="eligible && applied"
-                  [class.text-gray-500]="applied"
+                  [class.bg-amber-100]="gigStat === 'pending'"
+                  [class.text-amber-800]="gigStat === 'pending'"
+                  [class.bg-emerald-100]="gigStat === 'approved'"
+                  [class.text-emerald-800]="gigStat === 'approved'"
+                  [class.bg-gray-100]="gigStat === 'rejected'"
+                  [class.text-gray-500]="gigStat === 'rejected'"
                 >
-                  {{ !eligible ? "Locked" : applied ? "Applied" : "Apply" }}
+                  {{
+                    !eligible
+                      ? "Locked"
+                      : gigStat === "pending"
+                        ? "Pending"
+                        : gigStat === "approved"
+                          ? "Approved"
+                          : gigStat === "rejected"
+                            ? "Not approved"
+                            : "Apply"
+                  }}
                 </button>
               </div>
             </div>
@@ -191,14 +227,74 @@
       } @else {
         <div class="flex flex-col gap-4 px-5 py-5">
           @for (gig of myGigs(); track gig.id) {
+            @let gigStat = gigStatus(gig);
+            @let stats = linkStats(gig);
             <div class="overflow-hidden rounded-2xl border border-line">
               <div class="flex items-center justify-between bg-black px-4 py-3">
                 <span class="text-[11px] font-bold tracking-wide text-white">{{ gig.type.toUpperCase() }}</span>
-                <span class="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-800">Applied</span>
+                <span
+                  class="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                  [class.bg-amber-100]="gigStat === 'pending'"
+                  [class.text-amber-800]="gigStat === 'pending'"
+                  [class.bg-emerald-100]="gigStat === 'approved'"
+                  [class.text-emerald-800]="gigStat === 'approved'"
+                  [class.bg-gray-200]="gigStat === 'rejected'"
+                  [class.text-gray-600]="gigStat === 'rejected'"
+                >
+                  {{ gigStat === "pending" ? "Pending approval" : gigStat === "approved" ? "Approved" : "Not approved" }}
+                </span>
               </div>
               <div class="p-4">
                 <p class="text-[15px] font-semibold text-ink">{{ gig.title }}</p>
                 <p class="mt-2 font-mono text-[16px] font-bold text-accent">{{ formatPayout(gig) }}</p>
+
+                @if (gigStat === "pending") {
+                  <p class="mt-2 text-[13px] text-muted">
+                    Awaiting Skillbox approval to promote this show &mdash; you'll get your unique tracking link once
+                    approved.
+                  </p>
+                }
+
+                @if (gigStat === "rejected") {
+                  <p class="mt-2 text-[13px] text-muted">You weren't approved to promote this show.</p>
+                }
+
+                @if (gigStat === "approved") {
+                  <div class="mt-3 rounded-xl bg-panel p-3">
+                    <p class="text-[11px] font-semibold tracking-wide text-faint">YOUR TRACKING LINK</p>
+                    <div class="mt-1.5 flex items-center gap-2">
+                      <code class="flex-1 truncate text-[13px] text-ink">{{ referralUrl(gig) }}</code>
+                      <button
+                        type="button"
+                        (click)="copyLink(gig)"
+                        class="shrink-0 rounded-lg bg-black px-3 py-1.5 text-[12px] font-semibold text-white"
+                      >
+                        {{ copiedGigId() === gig.id ? "Copied" : "Copy" }}
+                      </button>
+                    </div>
+                    <p class="mt-2 text-[12px] text-muted">
+                      Post this in your stories, posts, or reels. Anyone who buys a ticket through it earns you
+                      commission.
+                    </p>
+                  </div>
+
+                  @if (stats) {
+                    <div class="mt-3 grid grid-cols-3 gap-2 text-center">
+                      <div class="rounded-xl bg-panel py-2.5">
+                        <p class="text-[16px] font-bold text-ink">{{ stats.clicks }}</p>
+                        <p class="text-[11px] text-faint">Clicks</p>
+                      </div>
+                      <div class="rounded-xl bg-panel py-2.5">
+                        <p class="text-[16px] font-bold text-ink">{{ stats.ticketsSold }}</p>
+                        <p class="text-[11px] text-faint">Tickets sold</p>
+                      </div>
+                      <div class="rounded-xl bg-panel py-2.5">
+                        <p class="text-[16px] font-bold text-accent">{{ formatCurrency(stats.commissionEarned) }}</p>
+                        <p class="text-[11px] text-faint">Commission</p>
+                      </div>
+                    </div>
+                  }
+                }
               </div>
             </div>
           }

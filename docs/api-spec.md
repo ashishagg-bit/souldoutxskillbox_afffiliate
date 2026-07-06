@@ -30,10 +30,19 @@ authoritative score. Treat `scoring.ts` as the spec for that port.
 | content_format | string | `Reels / Short video\|Photos / Carousel\|Stories only\|Long-form video` |
 | audience_india_percent | unsigned tinyint | 0-100 |
 | screenshot_path | string, nullable | storage disk path for the uploaded insights screenshot |
-| status | enum | `submitted`, `under_review`, `scored`, `rejected` |
+| status | enum | `under_review`, `approved`, `rejected` |
 | submitted_at | timestamp, nullable | |
-| scored_at | timestamp, nullable | |
+| scored_at | timestamp, nullable | set when a reviewer approves/rejects, not at submission time |
+| reviewed_by | bigint fk -> users.id, nullable | the Skillbox team member who approved/rejected |
 | created_at / updated_at | timestamp | |
+
+Gig-marketplace access (browsing eligible-tier gigs, applying to them) gates
+on `status = 'approved'`. There is no separate "scored" state — the AI score
+is always computed and previewable client-side the moment enough of the
+form is filled in (see `computeScore()`), but it only becomes the *official*
+tier once a reviewer approves the profile. This mirrors
+`ApplicationStateService.submitApplication()` / `.approveApplication()` /
+`.rejectApplication()` in the current frontend exactly.
 
 ### `affiliate_performance`
 
@@ -66,7 +75,15 @@ data above).
 | deliverable | string, nullable | e.g. "3 Reels · 30 sec each" |
 | payout_min | unsigned int | in paise or whole rupees, pick one convention |
 | payout_max | unsigned int | |
+| ticket_price | unsigned int, nullable | set only for gigs paid via per-ticket referral commission |
+| commission_rate | decimal(4,1), nullable | percent of ticket_price earned per ticket sold through the creator's link |
 | created_at / updated_at | timestamp | |
+
+`ticket_price`/`commission_rate` being set is what distinguishes "promote
+this show with a trackable link, earn a cut of ticket sales" gigs (Story
+coverage, Attendance) from flat-fee deliverable gigs (UGC, Brand campaign)
+that get paid `payout_min`-`payout_max` directly for the content itself, no
+link involved.
 
 ### `gig_applications`
 
@@ -75,24 +92,69 @@ data above).
 | id | bigint pk | |
 | user_id | bigint fk -> users.id | |
 | gig_id | bigint fk -> gigs.id | |
-| status | enum | `applied`, `approved`, `rejected`, `completed` |
+| status | enum | `pending`, `approved`, `rejected` |
+| referral_code | string, nullable, unique | generated on approval, see below |
 | applied_at | timestamp | |
+| reviewed_at | timestamp, nullable | |
+| reviewed_by | bigint fk -> users.id, nullable | |
 | created_at / updated_at | timestamp | |
 | | | unique index on (user_id, gig_id) |
 
+Each show a creator wants to promote is its own approval — "profile
+approved" (above) only unlocks *browsing* the marketplace; every individual
+gig application still needs a reviewer to say yes, mirroring limited
+`spots_left` and per-show brand fit. `referral_code` is only ever set once,
+at approval time, and never changes — it's the identity of that creator's
+promo link for that specific show for its whole lifetime.
+
+### `referral_clicks`
+
+| column | type | notes |
+|---|---|---|
+| id | bigint pk | |
+| gig_application_id | bigint fk -> gig_applications.id | |
+| clicked_at | timestamp | |
+| ip_hash | string | hashed, not raw IP, for basic bot/dedup filtering |
+| user_agent | string, nullable | |
+
+Written by the redirect endpoint below on every hit. Keep it write-only and
+cheap (no joins) since it's on the hot path of someone's Instagram story
+swipe-up.
+
+### `referral_conversions`
+
+| column | type | notes |
+|---|---|---|
+| id | bigint pk | |
+| gig_application_id | bigint fk -> gig_applications.id | |
+| order_id | bigint fk -> (whatever the existing ticket/order table is) | the actual ticket purchase this is attributed to |
+| ticket_count | unsigned int | tickets in that order |
+| commission_amount | unsigned int | `ticket_count * gigs.ticket_price * gigs.commission_rate / 100`, snapshotted at purchase time so later price/rate changes don't retroactively change past payouts |
+| payout_status | enum | `pending`, `paid` |
+| created_at | timestamp | |
+
+This is the table that turns "someone bought a ticket through the link"
+into money owed to the creator. It requires hooking into whatever the
+existing Skillbox checkout flow already does when an order completes —
+this repo has no visibility into that table/flow, so the integration point
+is: **whatever finalizes a ticket order needs to check for a referral
+cookie/query-param and, if present and valid, insert a row here.** This is
+the one piece of this whole spec that depends on code outside this
+affiliate module.
+
 ## Endpoints
 
-All endpoints are authenticated (Sanctum/session, matching however the
-existing Skillbox API authenticates the Angular app today) and scoped to the
-current user — there is no admin surface here, that's a separate reviewer
-dashboard out of scope for this feature.
+Creator-facing endpoints are authenticated (Sanctum/session, matching
+however the existing Skillbox API authenticates the Angular app today) and
+scoped to the current user. Admin endpoints (further below) additionally
+require a reviewer/staff role check.
 
 ### `GET /api/affiliate/application`
 Returns the current user's application, or `404` if they haven't applied yet.
 
 ```json
 {
-  "status": "scored",
+  "status": "under_review",
   "instagram_handle": "avadhcreates",
   "platforms": ["Instagram", "YouTube"],
   "city": "Delhi",
@@ -117,12 +179,14 @@ audience_india_percent: integer, required, 0-100
 screenshot: file, required, image, max 8mb
 ```
 
-Sets `status = 'submitted'`, `submitted_at = now()`. A reviewer job/queue
-later verifies the screenshot and flips status to `under_review` ->
-`scored` or `rejected` (this is the "within 48 hours" step shown in the
-app's status tracker). Until a reviewer workflow exists, it's fine to have
-this endpoint synchronously set `status = 'scored'`, `scored_at = now()` to
-match the current frontend's instant-preview behavior.
+Sets `status = 'under_review'`, `submitted_at = now()`. Sits in the admin
+queue (`GET /api/admin/affiliate-applications`) until a reviewer approves
+or rejects it — see the Admin section below.
+
+### `PATCH /api/affiliate/application`
+Lets the creator edit and resubmit fields after a rejection (re-apply
+without starting a whole new record). Same body shape as the POST above;
+sets `status` back to `under_review`.
 
 ### `GET /api/affiliate/score`
 Returns the computed score breakdown — output of
@@ -211,27 +275,111 @@ frontend doesn't need to duplicate `tierMeetsMinimum()` server logic.
 ```
 
 ### `POST /api/gigs/{gig}/apply`
-Creates a `gig_applications` row for the current user. `409` if already
-applied, `403` if not eligible (tier below `min_tier`).
+Creates a `gig_applications` row (`status = 'pending'`) for the current
+user. `409` if already applied, `403` if not eligible (tier below
+`min_tier`, or profile not yet `approved`).
 
 ### `GET /api/gigs/my`
 Lists gigs the current user has applied to, same shape as `GET /api/gigs`
-plus `gig_applications.status`.
+plus `gig_applications.status`. For rows where `status = 'approved'`,
+also include the link + live stats:
+
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "title": "Sunburn Arena Delhi — Feb 2025",
+      "gig_application_status": "approved",
+      "referral_link": "https://slb.link/avadhcreates-8f2k1",
+      "stats": { "clicks": 240, "tickets_sold": 12, "commission_earned": 2700 }
+    }
+  ]
+}
+```
+
+### `GET /r/{referral_code}` (public, unauthenticated, short-domain e.g. `slb.link`)
+The link creators actually paste into their stories/posts/reels. On hit:
+1. Look up the `gig_applications` row by `referral_code` (404 if unknown or
+   the gig application isn't `approved`).
+2. Insert a `referral_clicks` row.
+3. Set a short-lived signed cookie (or append a query param, whichever the
+   existing checkout flow can read) carrying the `referral_code`.
+4. Redirect (302) to the actual event/ticket page for that gig.
+
+Whatever completes a ticket order needs to check for that referral
+cookie/param and write a `referral_conversions` row if present — see that
+table's notes above for why this is the one part of the spec that reaches
+into code outside this affiliate module.
+
+## Admin endpoints
+
+Everything below requires a reviewer/staff role. There's no dedicated
+admin authentication scheme specified here — reuse whatever Skillbox
+already uses to gate internal tooling.
+
+### `GET /api/admin/affiliate-applications?status=under_review`
+Lists applications for the review queue (the frontend's `/admin` route,
+`AdminReviewComponent`), each with its computed score breakdown attached so
+the reviewer can sanity-check the AI-derived tier before approving:
+
+```json
+{
+  "data": [
+    {
+      "id": 42,
+      "instagram_handle": "avadhcreates",
+      "platforms": ["Instagram", "YouTube"],
+      "city": "Delhi",
+      "niche": "Nightlife",
+      "submitted_at": "2026-07-06T10:15:00Z",
+      "score": { "total": 51, "tier": "Silver", "platform_metrics": [ /* ... */ ] }
+    }
+  ]
+}
+```
+
+### `POST /api/admin/affiliate-applications/{id}/approve`
+Sets `status = 'approved'`, `scored_at = now()`, `reviewed_by = <admin user id>`.
+This is the action that unlocks the creator's gig marketplace.
+
+### `POST /api/admin/affiliate-applications/{id}/reject`
+Sets `status = 'rejected'`, same timestamp/reviewer fields.
+
+### `GET /api/admin/gig-applications?status=pending`
+Lists pending per-show promotion requests across all creators, for the
+"Pending show-promotion requests" queue on the same `/admin` screen.
+
+### `POST /api/admin/gig-applications/{id}/approve`
+Sets `status = 'approved'`, `reviewed_at = now()`, `reviewed_by = <admin user id>`,
+and generates `referral_code` (see `generateReferralCode()` in
+`src/app/core/lib/referral.ts` for the current client-side placeholder
+algorithm — port the same shape server-side: derived from the creator's
+handle plus the gig id, collision-checked against the unique index before
+insert).
+
+### `POST /api/admin/gig-applications/{id}/reject`
+Sets `status = 'rejected'`, same timestamp/reviewer fields. No referral
+code is ever generated for a rejected application.
 
 ## Frontend integration notes
 
 - `ApplicationStateService` currently persists to `localStorage` under key
-  `skillbox.affiliate.application.v1`. Replace its internals with an
+  `skillbox.affiliate.application.v2`. Replace its internals with an
   `HttpClient`-backed service; keep the public method signatures
-  (`submitApplication()`, `applyToGig()`, etc.) so components don't change.
+  (`submitApplication()`, `applyToGig()`, `approveApplication()`,
+  `approveGigApplication()`, etc.) so components don't change. Also drop the
+  `window.addEventListener("storage", ...)` cross-tab sync block in its
+  constructor once real data comes from the network instead of
+  `localStorage` — polling or a websocket subscription replaces it.
 - `GigsService.getAll()` currently returns the hardcoded array in
   `src/app/core/data/gigs.ts`. Point it at `GET /api/gigs` instead.
 - The score `computed()` signal in `ApplicationStateService` currently runs
   `computeScore()` client-side against locally-entered numbers. Once the
   backend is live, prefer `GET /api/affiliate/score` as the source of truth
-  post-submission, and keep the client-side `computeScore()` only as a
-  live preview during the step-3 "Upload insights" form (so users see an
-  estimate before submitting).
+  post-approval, and keep the client-side `computeScore()` only as a live
+  preview during the step-3 "Upload insights" form (so users see an
+  estimate before submitting) and on the pending-review dashboard banner.
 - Screenshot upload: the step-3 file input already collects a `File` object
   (`onFileSelected()` in `apply-wizard.component.ts`) but doesn't do
   anything with it yet. Two things to wire up once the backend exists:
@@ -240,3 +388,19 @@ plus `gig_applications.status`.
      endpoint's docs above for the confidence-flagging behavior).
   2. Include the same file in the final `POST /api/affiliate/application`
      multipart request on submit, since the reviewer needs it too.
+- `AdminReviewComponent` (`src/app/features/admin/`) currently reads and
+  mutates the same single-applicant `ApplicationStateService` directly,
+  standing in for a real reviewer queue. Once the backend exists, it should
+  instead call `GET /api/admin/affiliate-applications` /
+  `GET /api/admin/gig-applications` for the queue lists and the
+  corresponding approve/reject endpoints — and the route needs a real
+  staff-only guard, since right now `/admin` is reachable by anyone who
+  knows the URL.
+- `referral.ts`'s `generateReferralCode()` and `mockLinkStats()` are
+  placeholders: the former's collision handling is not production-safe
+  (no uniqueness check against real data), and the latter fabricates
+  clicks/tickets-sold/commission from a hash so the "My Gigs" screen has
+  something to show. Both get fully replaced by
+  `POST /api/admin/gig-applications/{id}/approve` (real code generation)
+  and `GET /api/gigs/my` (real stats from `referral_clicks` /
+  `referral_conversions`).

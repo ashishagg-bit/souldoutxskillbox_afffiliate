@@ -12,6 +12,8 @@ export const GIGS: Gig[] = [
     spotsLeft: 3,
     payoutMin: 8_000,
     payoutMax: 12_000,
+    ticketPrice: 1_500,
+    commissionRate: 15,
   },
   {
     id: "gig-vh1-supersonic",
@@ -46,6 +48,8 @@ export const GIGS: Gig[] = [
     spotsLeft: 12,
     payoutMin: 2_000,
     payoutMax: 5_000,
+    ticketPrice: 800,
+    commissionRate: 12,
   },
   {
     id: "gig-nh7-weekender",
@@ -58,6 +62,8 @@ export const GIGS: Gig[] = [
     spotsLeft: 5,
     payoutMin: 20_000,
     payoutMax: 35_000,
+    ticketPrice: 2_500,
+    commissionRate: 15,
   },
   {
     id: "gig-platinum-gq",

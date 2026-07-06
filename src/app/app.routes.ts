@@ -28,5 +28,10 @@ export const routes: Routes = [
     loadComponent: () =>
       import("./features/dashboard/gigs-dashboard.component").then((m) => m.GigsDashboardComponent),
   },
+  {
+    path: "admin",
+    loadComponent: () =>
+      import("./features/admin/admin-review.component").then((m) => m.AdminReviewComponent),
+  },
   { path: "**", redirectTo: "more" },
 ];

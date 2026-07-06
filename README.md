@@ -2,8 +2,13 @@
 
 A creator affiliate program for Skillbox (the event-ticketing platform):
 creators apply, connect their Instagram/socials, get scored 0-100 into a
-Bronze/Silver/Gold/Platinum tier, and unlock a gig marketplace (event
-attendance, story coverage, UGC, brand campaigns) matched to that tier.
+Bronze/Silver/Gold/Platinum tier, and — once a Skillbox reviewer approves
+their profile — unlock a gig marketplace (event attendance, story coverage,
+UGC, brand campaigns) matched to that tier. For shows promoted via a
+trackable link (story coverage / attendance gigs), each creator's request
+to promote a specific show is its own approval step too; once approved they
+get a unique link to post in their content, and earn commission on ticket
+sales attributed to it.
 
 Built as an Angular 19 standalone-component app so it can be lifted directly
 into the existing Skillbox Angular 19 web frontend (Laravel 10 / PHP 8.2
@@ -18,6 +23,13 @@ in-memory gig list) — no backend required to run it. Every state mutation
 goes through `ApplicationStateService`, so swapping mock data for real API
 calls is a single-file change (see the "Frontend integration notes" section
 of the API spec).
+
+The full loop works end to end in the browser: submit a profile
+application → a reviewer approves it at `/admin` → the creator's dashboard
+unlocks → they apply to a show → the reviewer approves that too → the
+creator gets a unique tracking link with (fabricated, hash-based) click and
+commission stats. `/admin` has no auth guard and is reachable by anyone who
+knows the URL — fine for a local demo, not for anything public.
 
 ## Running it
 
@@ -48,7 +60,15 @@ src/app/
     apply/            # 4-step apply wizard (socials -> city/niche -> insights -> review)
     application-status/ # post-submit status tracker
     dashboard/        # My Score / Available / My Gigs tabs
+    admin/            # reviewer screen: approve/reject profiles + per-show promotion requests
 ```
+
+`core/lib/referral.ts` generates each creator's unique per-gig tracking
+link and — since there's no click-tracking backend yet — fabricates
+plausible clicks/tickets-sold/commission numbers from a hash of the
+referral code, so "My Gigs" has something to show once a gig application
+is approved. Both are placeholders; see the API spec's "Admin endpoints"
+and `referral_clicks`/`referral_conversions` sections for the real design.
 
 `core/lib/scoring.ts` is the single source of truth for the scoring rubric
 (60 pts platform metrics + 40 pts Skillbox performance). Port it to PHP
@@ -65,3 +85,4 @@ details.
 | `/gigs/apply` | 4-step apply wizard |
 | `/gigs/status` | Post-submit status tracker |
 | `/gigs/dashboard` | My Score / Available / My Gigs |
+| `/admin` | Reviewer screen: approve/reject the profile and pending gig applications |
