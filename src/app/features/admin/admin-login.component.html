@@ -1,0 +1,35 @@
+<div class="flex min-h-screen items-center justify-center bg-[#f5f5f6] px-6">
+  <div class="w-full max-w-sm rounded-2xl border border-line bg-white p-8">
+    <p class="text-[13px] font-semibold tracking-wide text-faint">SKILLBOX INTERNAL</p>
+    <h1 class="mt-1 text-[22px] font-bold text-ink">Admin sign-in</h1>
+    <p class="mt-2 text-[13.5px] text-muted">Enter the reviewer passphrase to continue.</p>
+
+    <div class="mt-5">
+      <input
+        type="password"
+        [value]="passphrase()"
+        (input)="passphrase.set($any($event.target).value); error.set(false)"
+        (keyup.enter)="submit()"
+        placeholder="Passphrase"
+        autofocus
+        class="w-full rounded-lg border border-line px-3 py-2.5 text-[14px] outline-none"
+        [class.border-red-400]="error()"
+      />
+      @if (error()) {
+        <p class="mt-2 text-[13px] text-red-600">Incorrect passphrase.</p>
+      }
+      <button
+        type="button"
+        (click)="submit()"
+        class="mt-4 w-full rounded-lg bg-black py-2.5 text-[14px] font-semibold text-white"
+      >
+        Sign in
+      </button>
+    </div>
+
+    <p class="mt-5 text-[12px] text-faint">
+      This is a client-side placeholder gate, not real authentication &mdash; it only deters casual access to a
+      public demo link. Real staff accounts come with the Laravel backend.
+    </p>
+  </div>
+</div>

@@ -316,7 +316,12 @@ into code outside this affiliate module.
 
 Everything below requires a reviewer/staff role. There's no dedicated
 admin authentication scheme specified here — reuse whatever Skillbox
-already uses to gate internal tooling.
+already uses to gate internal tooling. The frontend currently gates
+`/admin` with a single shared client-side passphrase
+(`AdminAuthService`/`adminAuthGuard`) purely to deter casual access to a
+public demo link — replace that guard's check with a real session/role
+check against these endpoints once they exist; don't treat the passphrase
+as any kind of real access control.
 
 ### `GET /api/admin/affiliate-applications?status=under_review`
 Lists applications for the review queue (the frontend's `/admin` route,

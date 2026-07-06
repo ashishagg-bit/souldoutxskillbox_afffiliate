@@ -1,4 +1,5 @@
 import { Routes } from "@angular/router";
+import { adminAuthGuard } from "./core/guards/admin-auth.guard";
 
 export const routes: Routes = [
   { path: "", pathMatch: "full", redirectTo: "more" },
@@ -29,7 +30,13 @@ export const routes: Routes = [
       import("./features/dashboard/gigs-dashboard.component").then((m) => m.GigsDashboardComponent),
   },
   {
+    path: "admin-login",
+    loadComponent: () =>
+      import("./features/admin/admin-login.component").then((m) => m.AdminLoginComponent),
+  },
+  {
     path: "admin",
+    canActivate: [adminAuthGuard],
     loadComponent: () =>
       import("./features/admin/admin-panel.component").then((m) => m.AdminPanelComponent),
   },

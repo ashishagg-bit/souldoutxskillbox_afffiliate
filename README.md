@@ -96,4 +96,17 @@ details.
 - **Analytics** — a table of every active creator tracking link with clicks, tickets sold, and commission owed, plus totals.
 - **Settings** — edit the Bronze/Silver/Gold/Platinum score cutoffs and payout display text; takes effect immediately across the app (verified: changing a cutoff live-flips an already-computed score's tier label with no reload).
 
-All of it is backed by reactive services (`GigsService`, `TierSettingsService`, `ApplicationStateService`) persisted to `localStorage`, with a cross-tab `storage` event listener so changes made in the admin tab show up live in a creator tab open in the same browser — useful for testing both roles yourself without needing two accounts. `/admin` has **no auth guard** and is reachable by anyone who knows the URL — fine for a local demo, not for anything public.
+All of it is backed by reactive services (`GigsService`, `TierSettingsService`, `ApplicationStateService`) persisted to `localStorage`, with a cross-tab `storage` event listener so changes made in the admin tab show up live in a creator tab open in the same browser — useful for testing both roles yourself without needing two accounts.
+
+### Admin access
+
+`/admin` is gated by `/admin-login`, a single shared passphrase (default
+`skillbox2026`, change it in `src/app/core/state/admin-auth.service.ts`
+before sharing the deployed link with anyone). This is **not real
+authentication** — it's compared client-side and visible to anyone who
+reads the deployed JS bundle, so it only deters casual/accidental access
+to a public demo link. Sign-in persists for the browser tab's session
+(`sessionStorage`) until "Sign out" is clicked. Real staff accounts with
+server-side auth need to come from the Laravel backend — see
+`docs/api-spec.md`'s "Admin endpoints" section, which already assumes a
+real role check in front of every admin route.
