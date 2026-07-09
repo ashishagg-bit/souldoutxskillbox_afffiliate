@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="A new Flutter project.">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="skillbox_affiliate">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>skillbox_affiliate</title>
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <!--
+    Custom bootstrap (instead of the default flutter_bootstrap.js) so we
+    serve the locally-bundled canvaskit/ assets instead of fetching from
+    Google's CDN - avoids an external dependency for the (secondary, this
+    feature targets mobile) web build and works in network environments
+    that block Google's CDN.
+  -->
+  <script src="flutter.js" defer></script>
+  <script>
+    window.addEventListener('load', function (ev) {
+      // flutter.js requires _flutter.buildConfig to be set before load();
+      // engineRevision is omitted since canvasKitBaseUrl below makes it unused.
+      _flutter.buildConfig = {
+        builds: [{ compileTarget: 'dart2js', renderer: 'canvaskit', mainJsPath: 'main.dart.js' }],
+      };
+      _flutter.loader.load({
+        config: { canvasKitBaseUrl: 'canvaskit/' },
+      });
+    });
+  </script>
+</body>
+</html>

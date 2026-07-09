@@ -10,11 +10,22 @@ to promote a specific show is its own approval step too; once approved they
 get a unique link to post in their content, and earn commission on ticket
 sales attributed to it.
 
-Built as an Angular 19 standalone-component app so it can be lifted directly
-into the existing Skillbox Angular 19 web frontend (Laravel 10 / PHP 8.2
-backend, Flutter 3.4 mobile — this feature targets web only for now). See
-[`docs/api-spec.md`](docs/api-spec.md) for the backend contract this
-frontend expects once it's wired to real data.
+The production target is the existing Skillbox **Flutter** mobile app
+(Laravel 10 / PHP 8.2 backend). The feature is implemented twice in this
+repo:
+
+- **[`mobile/`](mobile/)** — the Flutter port (Provider state management,
+  matching the existing Skillbox app's pattern) meant to be merged directly
+  into the production mobile app. This is the primary, up-to-date
+  implementation.
+- **`src/`** (this Angular 19 app, described below) — the original
+  browser-based prototype, kept as-is since it's already built and
+  deployed live. No longer the primary target, but still useful as a
+  fast-iterating reference/demo.
+
+Both read/write the same shape of local mock data and implement the same
+flows; see [`docs/api-spec.md`](docs/api-spec.md) for the backend contract
+either one expects once wired to real data.
 
 ## Status
 
